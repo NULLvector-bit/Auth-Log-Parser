@@ -61,12 +61,120 @@ with open(path, "r") as file:
 with open(output,"w")as file:
     json.dump(parsed_dict,file,indent=4)
 def analytics(dict):
-    with open(output_dir / (path.stem + "_analytics.txt"),"w") as file:
+    username_counts = {}
+    ip_counts = {}
+    success_count = 0
+    failure_count = 0
+    total_attempts = len(dict["SSH Auth Logs"])
+    with open(output_dir / (path.stem + "_analytics.txt"), "w") as file:
         file.write("================================\n")
         file.write("AUTHENTICATION SUMMARY\n")
-        file.write("================================\n")
+        file.write("================================\n\n")
         for i in dict["SSH Auth Logs"]:
-            file.write(i["Username"]+"\n")
-            file.write(i["Source IP"]+"\n")
+            username = i["Username"]
+            ip = i["Source IP"]
+            status = i["Status"]
+            username_counts[username] = username_counts.get(username, 0) + 1
+            ip_counts[ip] = ip_counts.get(ip, 0) + 1
+            if status == "Success":
+                success_count += 1
+            elif status == "Failure":
+                failure_count += 1
+        file.write(f"{'Source IP':<18} {'Target Account':<24} {'Status'}\n")
+        file.write("-" * 55 + "\n")
+        for i in dict["SSH Auth Logs"]:
+            file.write(
+                    f"{i['Source IP']:<18} "
+                f"{i['Username']:<24} "
+                f"{i['Status']}\n"
+            )
+        file.write("\n")
+        file.write(f"Total Login Attempts: {total_attempts}\n")
+        file.write(f"Successful: {success_count}\n")
+        file.write(f"Failed: {failure_count}\n")
+        top_users = sorted(
+            username_counts.items(),
+            key=lambda item: item[1],
+            reverse=True
+        )
+        top_ips = sorted(
+            ip_counts.items(),
+            key=lambda item: item[1],
+            reverse=True
+        )
+        file.write("\nTop Targeted Accounts:\n")
+        for username, count in top_users[:5]:
+            file.write(f"{username:<24} {count}\n")
+        file.write("\nTop Originating Source IPs:\n")
+        for ip, count in top_ips[:5]:
+            file.write(f"{ip:<18} {count}\n")
+        session_user_counts = {}
+        opened_count = 0
+        closed_count = 0
+        total_sessions = len(dict["SSH session logs"])
+        file.write("\n\n")
+        file.write("================================\n")
+        file.write("SSH SESSION SUMMARY\n")
+        file.write("================================\n\n")
+        for i in dict["SSH session logs"]:
+            username = i["Username"]
+            status = i["Status"]
+            session_user_counts[username] = session_user_counts.get(username, 0) + 1
+            if status == "Opened":
+                opened_count += 1
+            elif status == "Closed":
+                closed_count += 1
+        file.write(f"Total Session Events: {total_sessions}\n")
+        file.write(f"Sessions Opened: {opened_count}\n")
+        file.write(f"Sessions Closed: {closed_count}\n")
+        top_session_users = sorted(
+            session_user_counts.items(),
+            key=lambda item: item[1],
+            reverse=True
+        )
+        file.write("\nTop Session Users:\n")
+        for username, count in top_session_users[:5]:
+            file.write(f"{username:<24} {count}\n")
+        sudo_user_counts = {}
+        sudo_target_counts = {}
+        sudo_command_counts = {}
+        total_sudo = len(dict["Sudo logs"])
+        file.write("\n\n")
+        file.write("================================\n")
+        file.write("SUDO SUMMARY\n")
+        file.write("================================\n\n")
+        for i in dict["Sudo logs"]:
+            username = i["Username"]
+            target_user = i["Authority"]
+            command = i["Command"]
+
+            sudo_user_counts[username] = sudo_user_counts.get(username, 0) + 1
+            sudo_target_counts[target_user] = sudo_target_counts.get(target_user, 0) + 1
+            sudo_command_counts[command] = sudo_command_counts.get(command, 0) + 1
+        file.write(f"Total Sudo Commands: {total_sudo}\n")
+        top_sudo_users = sorted(
+            sudo_user_counts.items(),
+            key=lambda item: item[1],
+            reverse=True
+        )
+        top_sudo_targets = sorted(
+            sudo_target_counts.items(),
+            key=lambda item: item[1],
+            reverse=True
+        )
+        top_sudo_commands = sorted(
+            sudo_command_counts.items(),
+            key=lambda item: item[1],
+            reverse=True
+        )
+        file.write("\nTop Sudo Users:\n")
+        for username, count in top_sudo_users[:5]:
+            file.write(f"{username:<24} {count}\n")
+        file.write("\nTop Target Users:\n")
+        for username, count in top_sudo_targets[:5]:
+            file.write(f"{username:<24} {count}\n")
+        file.write("\nTop Sudo Commands:\n")
+        for command, count in top_sudo_commands[:5]:
+            file.write(f"{command:<50} {count}\n")
 analytics(parsed_dict)
 print("Auth Log Parser")
