@@ -60,4 +60,13 @@ with open(path, "r") as file:
         master_parser(line)
 with open(output,"w")as file:
     json.dump(parsed_dict,file,indent=4)
+def analytics(dict):
+    with open(output_dir / (path.stem + "_analytics.txt"),"w") as file:
+        file.write("================================\n")
+        file.write("AUTHENTICATION SUMMARY\n")
+        file.write("================================\n")
+        for i in dict["SSH Auth Logs"]:
+            file.write(i["Username"]+"\n")
+            file.write(i["Source IP"]+"\n")
+analytics(parsed_dict)
 print("Auth Log Parser")
