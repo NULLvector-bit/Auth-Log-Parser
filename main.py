@@ -23,6 +23,7 @@ def master_parser(line):
     if (match):
         parsed_dict["Sudo logs"].append(sudo_parser(match))
         return parsed_dict
+    return
 def ssh_auth_parser(match):
     data = {
         "Timestamp": f"{match.group('month')} {match.group('day')} {match.group('time')}",
