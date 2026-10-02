@@ -6,7 +6,13 @@ from analytics_ssh_auth import analytics_ssh_auth
 from analytics_ssh_session import analytics_ssh_session
 from analytics_sudo import analytics_sudo 
 def main():
-    path = Path(input("Enter Log Path: ")).expanduser()
+    if len(sys.argv) > 2:
+        print("Usage: python main.py <log_file>")
+        sys.exit()
+    if len(sys.argv)==2:
+        path=Path(sys.argv[1]).expanduser()
+    else:
+        path=Path(input("Enter Log Path")).expanduser()
     script_dir = Path(__file__).resolve().parent
     output_dir = script_dir / "output"
     try:
