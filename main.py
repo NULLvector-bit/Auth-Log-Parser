@@ -4,7 +4,8 @@ from pathlib import Path
 from parsers import master_parser,parsed_dict
 from analytics_ssh_auth import analytics_ssh_auth
 from analytics_ssh_session import analytics_ssh_session
-from analytics_sudo import analytics_sudo 
+from analytics_sudo import analytics_sudo
+from flagger import flagger
 def main():
     if len(sys.argv) > 2:
         print("Usage: python main.py <log_file>")
@@ -46,6 +47,14 @@ def main():
         sys.exit()
     except OSError as e:
         print(f"Unexpected error: {e}")
+        sys.exit()
+    try:
+    flagger(parsed_dict)
+    except ValueError:
+        print("Invalid timestamp found while checking for brute force activity")
+        sys.exit()
+    except KeyError as e:
+        print(f"Missing field in parsed event: {e}")
         sys.exit()
     try:
         analytics_ssh_auth(parsed_dict, output_dir, path)
