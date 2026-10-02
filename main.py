@@ -7,6 +7,7 @@ from analytics_ssh_session import analytics_ssh_session
 from analytics_sudo import analytics_sudo
 from flagger_ssh_auth import flagger_ssh_auth
 from flagger_sudo import flagger_sudo
+from live_monitoring import live_monitoring
 def main():
     if len(sys.argv) > 2:
         print("Usage: python main.py <log_file>")
@@ -31,6 +32,7 @@ def main():
             for line in file:
                 if line.strip():
                     master_parser(line)
+            count=file.tell()
     except FileNotFoundError:
         print("Invalid File Path")
         sys.exit()
@@ -80,6 +82,14 @@ def main():
         sys.exit()
     print(f"Parsed JSON: {output}")
     print(f"Analytics: {output_dir / (path.stem + '_analytics.txt')}")
+    live_start_counts = {
+    "SSH Auth Logs": len(parsed_dict["SSH Auth Logs"]),
+    "SSH session logs": len(parsed_dict["SSH session logs"]),
+    "Sudo logs": len(parsed_dict["Sudo logs"])
+    }
+    with open(path, "r") as file:
+        file.seek(count)
+        live_monitoring(file,parsed_dict,output,output_dir,path,live_start_counts)
     print("Auth Log Parser")
 if __name__ == "__main__":
     main()
