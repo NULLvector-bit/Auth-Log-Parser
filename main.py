@@ -5,7 +5,8 @@ from parsers import master_parser,parsed_dict
 from analytics_ssh_auth import analytics_ssh_auth
 from analytics_ssh_session import analytics_ssh_session
 from analytics_sudo import analytics_sudo
-from flagger import flagger
+from flagger_ssh_auth import flagger_ssh_auth
+from flagger_sudo import flagger_sudo
 def main():
     if len(sys.argv) > 2:
         print("Usage: python main.py <log_file>")
@@ -41,7 +42,7 @@ def main():
         sys.exit()
     try:
         with open(output,"w")as file:
-            json.dump(parsed_dict,file,indent=4)
+            json.dump(parsed_dict,file,indent=4) 
     except PermissionError:
         print("Could not write/create json dump")
         sys.exit()
@@ -49,9 +50,17 @@ def main():
         print(f"Unexpected error: {e}")
         sys.exit()
     try:
-    flagger(parsed_dict)
+        flagger_ssh_auth(parsed_dict)
     except ValueError:
         print("Invalid timestamp found while checking for brute force activity")
+        sys.exit()
+    except KeyError as e:
+        print(f"Missing field in parsed event: {e}")
+        sys.exit()
+    try:
+        flagger_sudo(parsed_dict)
+    except ValueError:
+        print("Invalid timestamp found while checking for sudo activity")
         sys.exit()
     except KeyError as e:
         print(f"Missing field in parsed event: {e}")
@@ -69,6 +78,8 @@ def main():
     except OSError as e:
         print(f"Unexpected error while creating analytics: {e}")
         sys.exit()
+    print(f"Parsed JSON: {output}")
+    print(f"Analytics: {output_dir / (path.stem + '_analytics.txt')}")
     print("Auth Log Parser")
 if __name__ == "__main__":
     main()
