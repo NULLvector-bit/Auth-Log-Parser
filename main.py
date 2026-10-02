@@ -21,7 +21,8 @@ def main():
     try:
         with open(path, "r") as file:
             for line in file:
-                master_parser(line)
+                if line.strip():
+                    master_parser(line)
     except FileNotFoundError:
         print("Invalid File Path")
         sys.exit()
@@ -53,5 +54,6 @@ def main():
     except OSError as e:
         print(f"Unexpected error while creating analytics: {e}")
         sys.exit()
+    print("Auth Log Parser")
 if __name__ == "__main__":
     main()

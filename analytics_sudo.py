@@ -41,4 +41,9 @@ def analytics_sudo(parseddict,output_dir,path):
         file.write("\nTop Sudo Commands:\n")
         for command, count in top_sudo_commands[:5]:
             file.write(f"{command:<50} {count}\n")
+        file.write("\n")
+        file.write("================================\n")
+        file.write(f"Skipped Lines: {parseddict["Skipped Lines"]}\n")
+        file.write("================================\n")
+
 

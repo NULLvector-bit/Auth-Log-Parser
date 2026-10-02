@@ -7,7 +7,8 @@ from patterns import (
 parsed_dict = {
     "SSH Auth Logs": [],
     "SSH session logs": [],
-    "Sudo logs": []
+    "Sudo logs": [],
+    "Skipped Lines":0
 }
 def master_parser(line):
     match=re.match(ssh_auth_pattern,line)
@@ -22,7 +23,7 @@ def master_parser(line):
     if (match):
         parsed_dict["Sudo logs"].append(sudo_parser(match))
         return
-    return
+    parsed_dict["Skipped Lines"]+=1
 def ssh_auth_parser(match):
     data = {
         "Timestamp": f"{match.group('month')} {match.group('day')} {match.group('time')}",
