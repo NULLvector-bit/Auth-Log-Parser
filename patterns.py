@@ -21,7 +21,8 @@ ssh_session_pattern = (
     r"session\s+"
     r"(?P<status>opened|closed)\s+"
     r"for\s+user\s+"
-    r"(?P<username>\S+)$"
+    r"(?P<username>\S+)"
+    r"(?:\s+by\s+\(uid=\d+\))?$"
 )
 
 sudo_pattern = (
