@@ -1,4 +1,5 @@
 from datetime import datetime
+last_alerted={}
 def flagger_ssh_auth(parsed_dict):
     failed= {}
     for event in parsed_dict["SSH Auth Logs"]:
@@ -15,12 +16,16 @@ def flagger_ssh_auth(parsed_dict):
             timestamp =datetime.strptime(event["Timestamp"],"%b %d %H:%M:%S")
             times.append(timestamp)
         times.sort()
+        if ip in last_alerted:
+            times=[ t for t in times
+                 if t>last_alerted[ip]]
         start=0
         for end in range(len(times)):
             while (times[end] - times[start]).total_seconds() > 60:
                 start +=1
             count=end-start+1
             if count >=5:
+                last_alerted[ip]=times[end]
                 print(f"IP Flagged {ip} "
                       f"{count} logins in 60 seconds. "
                       f"Targeted user(s): {', '.join(usernames)}"
