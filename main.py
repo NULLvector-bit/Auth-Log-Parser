@@ -87,9 +87,28 @@ def main():
     "SSH session logs": len(parsed_dict["SSH session logs"]),
     "Sudo logs": len(parsed_dict["Sudo logs"])
     }
-    with open(path, "r") as file:
-        file.seek(count)
-        live_monitoring(file,parsed_dict,output,output_dir,path,live_start_counts)
+    try:
+        with open(path, "r") as file:
+            live_monitoring(file,parsed_dict,output,output_dir,path,live_start_counts)
+    except FileNotFoundError:
+        print("Invalid Path")
+        sys.exit()
+
+    except PermissionError:
+        print("Permission to access file denied")
+        sys.exit()
+
+    except ValueError:
+        print("Invalid value found while processing the log")
+        sys.exit()
+
+    except KeyError as e:
+        print(f"Missing field in parsed event: {e}")
+        sys.exit()
+
+    except OSError as e:
+        print(f"Unexpected file error: {e}")
+        sys.exit()
     print("Auth Log Parser")
 if __name__ == "__main__":
     main()
