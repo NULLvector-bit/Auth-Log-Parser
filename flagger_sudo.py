@@ -31,7 +31,8 @@ def flagger_sudo(parsed_dict):
                         f"{event['Command']}"
                     )
                     reported_root.add(event_id)
-            if any(command in event["Command"] for command in sensitive_commands):
+            command = event["Command"].split()[0]
+            if any(command.endswith("/" +sensitive) for sensitive in sensitive_commands):
                 if event_id not in reported_sensitive:
                     print(
                             f"Sensitive Command: {username} flagged "
