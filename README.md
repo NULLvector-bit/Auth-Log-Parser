@@ -1,42 +1,108 @@
 Auth Log Parser
 
-A Python CLI tool for parsing Linux authentication logs such as /var/log/auth.log.
+This is a Python command-line tool designed to parse Linux authentication logs, such as /var/log/auth.log. The tool focuses on extracting SSH authentication events, SSH session data and sudo command activity. It generates analytics, flags behavior and supports live monitoring of new log entries as they are added.
 
-The project extracts SSH authentication, SSH session, and sudo events, generates analytics, flags potentially suspicious activity, and supports live monitoring of newly appended log entries.
+Log Parsing
 
-Log Parsing:
+The parser reads the authentication log. Extracts relevant information from three types of events: SSH authentication, SSH sessions and sudo commands.
 
-The parser reads authentication logs and extracts information from SSH authentication, SSH sessions, and sudo commands.
+For SSH authentication events it captures:
 
-For SSH authentication events, it extracts the timestamp, source IP, username, event type, status, PID, and port.
+- Timestamp
 
-For SSH session events, it extracts the timestamp, username, event type, status, and PID.
+- Source IP address
 
-For sudo events, it extracts the timestamp, username, event type, PID, directory, TTY, authority, and command.
+- Username
 
-Malformed or irrelevant lines are skipped without crashing the program. The number of skipped lines is recorded in the parsed JSON output.
+- Event type (password, public key)
 
-Analytics:
+- Status (success or failure)
 
-Analytics are separated into three modules.
+- Process ID (PID)
 
-analytics_ssh_auth.py analyzes SSH authentication attempts, including successful and failed logins, targeted accounts, and source IPs.
+- Port number
 
-analytics_ssh_session.py analyzes SSH session activity, including opened and closed sessions and session users.
+For SSH session events it captures:
 
-analytics_sudo.py analyzes sudo activity, including sudo users, target users, and executed commands.
+- Timestamp
 
-Security Flagging:
+- Username
 
-Security checks are handled separately from the analytics.
+- Event type (e.g. session opened, session closed)
 
-flagger_ssh_auth.py detects repeated failed authentication attempts from the same IP within a defined time window.
+- Status
+
+- Process ID (PID)
+
+For sudo events it captures:
+
+- Timestamp
+
+- Username
+
+- Event type
+
+- Process ID (PID)
+
+- Working directory
+
+- TTY
+
+- Authority (sudoers, wheel)
+
+- Command executed
+
+The tool skips malformed or irrelevant log lines without crashing. It keeps track of how many linesre skipped and includes this count in the final JSON output.
+
+Analytics
+
+Analytics are split into three modules.
+
+analytics_ssh_auth.py analyzes SSH authentication attempts. It tracks:
+
+- Successful. Failed logins
+
+- Top targeted accounts
+
+- Top source IP addresses
+
+analytics_ssh_session.py analyzes SSH session activity. It tracks:
+
+- Total session events
+
+- Number of opened sessions
+
+- Number of closed sessions
+
+- users by session count
+
+analytics_sudo.py analyzes sudo activity. It tracks:
+
+- Total sudo commands
+
+- Top sudo users
+
+- Target users (users granted access via sudo)
+
+- Most executed commands
+
+Security Flagging
+
+Security checks are handled separately from analytics to keep the system modular.
+
+flagger_ssh_auth.py looks for repeated failed authentication attempts from the IP address within a defined time window. For example if an IP tries to log in five times in 60 seconds it is flagged.
 
 Example:
 
 IP Flagged 203.0.113.99 5 logins in 60 seconds. Targeted user(s): admin, test, user, root
 
-flagger_sudo.py checks sudo activity and flags root access, configured sensitive commands, and high sudo activity within a defined time window.
+flagger_sudo.py monitors sudo activity and flags:
+
+- Root access attempts
+
+- Use of commands
+
+- High volume of sudo commands within a short time
 
 Examples:
 
@@ -46,94 +112,146 @@ Sensitive Command: alice flagged /usr/bin/systemctl restart sshd
 
 High Sudo Activity: alice flagged 5 commands within 60 seconds
 
-Sensitive command detection checks the actual executable rather than simply searching for a word inside the command. This prevents commands such as notpasswd from being incorrectly detected as passwd.
+The tool checks the actual executable being run not just words in the command. This avoids positives. For example it won’t flag a command like notpasswd just because it contains the word passwd.
 
-Live Monitoring:
+Live Monitoring
 
-The program supports live monitoring of authentication logs that are continuously being appended to.
+The tool supports monitoring of logs that are continuously updated.
 
-When live monitoring starts, the existing contents of the log file are not processed again. The program records how many events were already parsed and waits for new lines to be appended to the file.
+When live monitoring starts it does not reprocess existing log entries. Instead it records how many events were already parsed and waits for new lines to be added.
 
-When a new log entry is detected, it is passed through the normal parser. New SSH authentication and sudo events are added to the live event history and passed to the security flaggers.
+When a new log entry appears it goes through the parsing process. Ssh authentication and sudo events are added to the live event history and sent to the security flaggers.
 
-The parsed JSON file is overwritten with the updated parsed data, and the analytics files are regenerated using the complete current dataset.
+The parsed JSON file is overwritten with the data. The analytics files are regenerated using the dataset.
 
-The flaggers keep track of previously reported events so that older alerts are not repeatedly printed during live monitoring.
+To prevent repeated alerts the flaggers remember previously reported events. Old alerts are not shown again during monitoring.
 
-Live monitoring continues until the user stops the program with Ctrl+C.
+Live monitoring continues until the user stops the program using Ctrl+C.
 
-Usage:
+Usage
 
-The program accepts the log file path directly.
+The program accepts a log file path directly.
 
 python main.py /var/log/auth.log
 
-It can also be run interactively.
+It can also run interactively.
 
 python main.py
 
-If no path is provided, the program asks for the authentication log path.
+If no path is given the program will prompt for the authentication log path.
 
-After the initial log processing is complete, the program asks whether live monitoring should start.
+After the initial parsing is done the program asks:
 
-Start live monitoring? (y/n):
+Start monitoring? (y/n).
 
-Entering y starts live monitoring. Entering n exits after the initial parsing, flagging, and analytics.
+Choosing y starts monitoring. Choosing n ends the program after parsing, flagging and generating analytics.
 
-Output:
+Output
 
-After processing the log, the program generates output files inside the output directory.
+After processing the log the program creates output files in the output directory.
 
-log_parsed.json:
+log_parsed.json
 
-This file contains the structured events extracted from the log.
+This file holds the events extracted from the log.
 
-The JSON contains SSH Auth Logs, SSH session logs, Sudo logs, and Skipped Lines.
+It includes:
+
+- SSH Auth Logs
+
+- SSH Session Logs
+
+- Sudo Logs
+
+- Skipped Lines count
 
 Example:
 
 {
+
 "SSH Auth Logs": [
+
 {
-"Timestamp": "Oct 1 13:20:41",
-"Source IP": "192.168.1.20",
-"Username": "alice",
-"Event Type": "SSH Authentication password",
-"Status": "Success",
-"PID": 1234,
+
+"Timestamp": "Oct 1 13:20:41"
+
+"Source IP": "192.168.1.20"
+
+"Username": "alice"
+
+"Event Type": "SSH Authentication password"
+
+"Status": "Success"
+
+"PID": 1234
+
 "Port": 54321
+
 }
+
 ]
+
 }
 
-During live monitoring, this JSON file is overwritten whenever new log entries are processed so that it contains the latest parsed data.
+During monitoring this file is updated every time new log entries are processed. It always contains the parsed data.
 
-log_analytics.txt:
+log_analytics.txt
 
-This file contains the generated analytics for authentication, SSH sessions, and sudo activity.
+This file contains the analytics for authentication SSH sessions and sudo activity.
 
-The authentication analytics contain total login attempts, successful and failed attempts, top targeted accounts, and top originating IPs.
+Authentication analytics include:
 
-The SSH session analytics contain total session events, opened sessions, closed sessions, and top session users.
+- Total login attempts
 
-The sudo analytics contain total sudo commands, top sudo users, target users, and top sudo commands.
+- Successful and failed attempts
 
-During live monitoring, the analytics are regenerated so that they reflect the current parsed log data.
+- targeted accounts
 
-Project Files:
+- Top originating IPs
 
-The parser is handled by parsers.py, with log patterns defined in patterns.py.
+SSH session analytics include:
 
-The analytics modules are analytics_ssh_auth.py, analytics_ssh_session.py, and analytics_sudo.py.
+- Total session events
 
-The security flaggers are flagger_ssh_auth.py and flagger_sudo.py.
+- Opened sessions
+
+- Closed sessions
+
+- Top session users
+
+Sudo analytics include:
+
+- Total sudo commands
+
+- Top sudo users
+
+- Target users
+
+- Top sudo commands
+
+During live monitoring the analytics are regenerated to reflect the most current data.
+
+Project Files
+
+The parser logic is in parsers.py. Log patterns are defined in patterns.py.
+
+Analytics modules:
+
+- analytics_ssh_auth.py
+
+- analytics_ssh_session.py
+
+- analytics_sudo.py
+
+Security flaggers:
+
+- flagger_ssh_auth.py
+
+- flagger_sudo.py
 
 Live monitoring is handled by live_monitoring.py.
 
-main.py brings the parsing, analytics, flagging, and live monitoring components together.
+main.py integrates all components: parsing, analytics, flagging and live monitoring.
 
-Technologies:
+Technologies
 
-The project uses Python, regular expressions, file I/O, JSON, and standard Python data structures.
-
-No external data-analysis or specialized log-parsing libraries are used.
+The project uses Python. It relies on expressions for pattern matching. It handles file input and output. It uses JSON for data. It uses Python data structures like lists, dictionaries and sets. No external libraries, for data analysis or log parsing are used.
